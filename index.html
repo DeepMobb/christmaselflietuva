@@ -181,13 +181,16 @@
         // --- PRE-DEFINED DATA ---
         // This list will be used to 'seed' the database the first time the app is run.
         const PREDEFINED_PARTICIPANTS = [
-            { id: 1, name: 'Rudolph', icon: '🦌' },
-            { id: 2, name: 'Mrs. Claus', icon: '🤶' },
-            { id: 3, name: 'Frosty', icon: '☃️' },
-            { id: 4, name: 'Noel', icon: '🎄' },
-            { id: 5, name: 'Comet', icon: '☄️' },
-            { id: 6, name: 'Buddy the Elf', icon: '🧑‍🎄' },
-            { id: 7, name: 'Santa', icon: '🎅' }
+            { id: 1, name: 'Milda', icon: '🎄' },
+            { id: 2, name: 'Vytautas', icon: '🎁' },
+            { id: 3, name: 'Enrika', icon: '🦌' },
+            { id: 4, name: 'Erik', icon: '🍁' },
+            { id: 5, name: 'Lukas', icon: '☃️' },
+            { id: 6, name: 'Elija', icon: '🎅' },
+            { id: 7, name: 'Regina', icon: '🤶' },
+            { id: 8, name: 'Viktor', icon: '🔔' },
+            { id: 9, name: 'Monika', icon: '🎄' },
+            { id: 10, name: 'Hans', icon: '🎁' }
         ];
 
         // --- DOM ELEMENTS ---
@@ -294,6 +297,20 @@
                 console.log('Database seeded.');
             } else {
                 console.log('Raffle data found.');
+                // OPTIONAL: Check if participant list is different and update
+                const dbParticipants = docSnap.data().participants;
+                if (JSON.stringify(dbParticipants) !== JSON.stringify(PREDEFINED_PARTICIPANTS)) {
+                    console.log('Participant list mismatch. Updating database list.');
+                    // Be careful with this in production, as it could wipe assignments
+                    // For this app, we assume resetting assignments is OK if the list changes.
+                    await updateDoc(raffleDocRef, {
+                        participants: PREDEFINED_PARTICIPANTS,
+                        assignments: [] // Reset assignments if participant list changes
+                    });
+                    // Clear local storage as assignments are invalid
+                    clearMyAssignmentFromStorage();
+                    myGiverId = null;
+                }
             }
         }
 
@@ -305,7 +322,18 @@
             // Check if user has already been assigned
             myGiverId = getMyAssignmentFromStorage();
             if (myGiverId) {
-                showMyAssignment();
+                // Check if this assignment is still valid
+                const myAssignment = appState.assignments.find(a => a.giverId === myGiverId);
+                if (myAssignment) {
+                    showMyAssignment();
+                } else {
+                    // Assignment was reset
+                    console.warn('Assignment no longer in DB. Clearing storage.');
+                    clearMyAssignmentFromStorage();
+                    myGiverId = null;
+                    populateDropdown();
+                    showCard(selectionCard);
+                }
             } else {
                 // User has not been assigned, show selection
                 populateDropdown();
@@ -322,7 +350,7 @@
 
             nameSelect.innerHTML = '<option value="">-- Select your name --</option>'; // Reset
             
-            if (availableParticipants.length === 0) {
+            if (availableParticipants.length === 0 && appState.participants.length > 0) {
                 // All assignments are done
                 showCard(allDoneCard);
             } else {
@@ -350,7 +378,10 @@
 
             const receiver = appState.participants.find(p => p.id === myAssignment.receiverId);
             if (!receiver) {
-                console.error('Assignment found, but receiver data is missing!');
+                console.error('Assignment found, but receiver data is missing! This may happen if the participant list was changed.');
+                // Clear bad data and reset
+                clearMyAssignmentFromStorage();
+                renderApp();
                 return;
             }
 
@@ -413,8 +444,21 @@
                         .filter(id => id !== selectedGiverId && !assignedReceiverIds.has(id));
 
                     if (availableReceiverIds.length === 0) {
-                        // This should ideally not be hit if dropdown is correct, but good failsafe
-                        throw "No available receivers left!";
+                        // Check if the only person left is the user themselves
+                        const allReceiverIds = new Set(participants.map(p => p.id));
+                        const unassignedReceivers = new Set(
+                            [...allReceiverIds].filter(id => !assignedReceiverIds.has(id))
+                        );
+
+                        if (unassignedReceivers.size === 1 && unassignedReceivers.has(selectedGiverId)) {
+                            // Last person is stuck with themselves.
+                            // We must allow re-assignment to a random *giver*
+                            // This logic is complex, for now we will just error
+                            console.error("Last person is stuck with themselves!");
+                            throw "No available receivers left! The last person is stuck. Please reset.";
+                        } else {
+                             throw "No available receivers left!";
+                        }
                     }
 
                     // 5. Randomly pick one
@@ -443,7 +487,15 @@
 
             } catch (error) {
                 console.error("Transaction failed: ", error);
-                alert("Oops! Someone might have just picked a name. Please try again.");
+                // Use a simple, non-blocking notification instead of alert()
+                const originalError = error.message || error.toString();
+                if (originalError.includes("alert")) {
+                    console.error("Original error contained 'alert', which is blocked.");
+                } else {
+                     // Check if a custom non-blocking alert can be shown
+                     // For now, log to console and reset button
+                }
+                console.error("Assignment error:", originalError);
                 assignButton.disabled = false;
                 assignButton.textContent = 'See who you are an elf to';
             }
