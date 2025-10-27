@@ -555,7 +555,7 @@
             const assignedGiverIds = new Set(appState.assignments.map(a => a.giverId));
             const availableParticipants = appState.participants.filter(p => !assignedGiverIds.has(p.id));
 
-            nameSelect.innerHTML = '<option value="">-- Pasirinkite savo vardą --</option>'; // Reset
+            nameSelect.innerHTML = '<option value="">-- Pasirink savo vardą --</option>'; // Reset
             
             if (availableParticipants.length === 0 && appState.participants.length > 0) {
                 // All assignments are done
@@ -943,6 +943,7 @@
     </script>
 </body>
 </html>
+
 
 
 
