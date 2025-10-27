@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="lt"> <!-- Set language to Lithuanian -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -80,6 +80,11 @@
             
             <!-- Card 1: Select Your Name (Default) -->
             <div id="selection-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-4 hidden">
+                <!-- LocalStorage Warning -->
+                <div id="storage-warning" class="hidden p-3 mb-4 bg-yellow-900 border border-yellow-700 text-yellow-300 text-sm rounded-lg">
+                    <strong>Dėmesio!</strong> Jūsų naršyklė blokuoja saugyklą. Jūsų pasirinkimas nebus išsaugotas perkrovus puslapį. Įjunkite "Cookies" arba "Local Storage".
+                </div>
+                
                 <label for="name-select" class="block text-sm font-medium text-gray-300 mb-2">Koks tavo vardas?</label>
                 <select id="name-select" class="w-full bg-gray-800 border-gray-700 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition p-3">
                     <option value="">-- Pasirink savo vardą --</option>
@@ -104,10 +109,34 @@
                     <p id="receiver-icon" class="text-7xl mt-4">🎄</p>
                     <p id="receiver-name" class="text-4xl font-extrabold text-teal-400 mt-2">...</p>
                     <p class="text-gray-500 text-sm mt-6">Sėkmingo dovanų ieškojimo! Išrink arba sukurk dovaną, kuri Tavo manymu, padarys šį žmogų laimingu!✨🎄✨</p>
+                    
+                    <!-- NEW: Back Button -->
+                    <button id="back-button" class="w-full mt-6 bg-gray-700 text-gray-200 font-bold text-lg py-3 rounded-full hover:bg-gray-600 transition-all duration-300">
+                        Grįžti atgal
+                    </button>
                 </div>
             </div>
 
-            <!-- Card 3: All assignments done -->
+            <!-- NEW: Card 3: Summary View (Shown if user already picked) -->
+            <div id="summary-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
+                <!-- User's Assignment -->
+                <div class="border-b border-gray-700 pb-4">
+                    <p id="summary-user-icon" class="text-5xl">🧑‍🎄</p>
+                    <p id="summary-user-name" class="text-lg text-gray-400 mt-2">Tu esi <span class="font-bold text-white">...</span></p>
+                    <p class="text-lg text-gray-400">Tavo elfas yra...</p>
+                    <p id="summary-receiver-icon" class="text-7xl mt-2">🎁</p>
+                    <p id="summary-receiver-name" class="text-4xl font-extrabold text-teal-400 mt-1">...</p>
+                </div>
+                <!-- Progress -->
+                <div class="pt-4 mt-4">
+                     <p class="text-2xl font-bold text-green-400">
+                        <span id="progress-count">...</span> / <span id="progress-total">...</span>
+                     </p>
+                     <p class="text-gray-400 text-sm">elfų jau paskirta</p>
+                </div>
+            </div>
+
+            <!-- Card 4: All assignments done (Was Card 3) -->
             <div id="all-done-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
                 <p class="text-7xl">🎉</p>
                 <p class="text-2xl font-bold text-green-400 mt-4">All Elves Assigned!</p>
@@ -116,7 +145,7 @@
 
         </main>
 
-        <!-- Sticky Footer / Action Bar -->
+        <!-- Sticky Footer / Action Bar (HIDDEN) -->
         <footer class="sticky bottom-0 bg-gray-900 p-4 border-t border-gray-800 shadow-inner hidden">
             <!-- This button is no longer used -->
         </footer>
@@ -171,7 +200,6 @@
         import { 
             getAuth, 
             signInAnonymously, 
-            signInWithCustomToken, 
             onAuthStateChanged 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
@@ -214,7 +242,18 @@
         const receiverIcon = document.getElementById('receiver-icon');
         const receiverName = document.getElementById('receiver-name');
         const resetButton = document.getElementById('admin-reset-button');
+        const storageWarning = document.getElementById('storage-warning'); // Added
+        const backButton = document.getElementById('back-button'); // Added
         
+        // New Summary Card Elements
+        const summaryCard = document.getElementById('summary-card');
+        const summaryUserIcon = document.getElementById('summary-user-icon');
+        const summaryUserName = document.getElementById('summary-user-name');
+        const summaryReceiverIcon = document.getElementById('summary-receiver-icon');
+        const summaryReceiverName = document.getElementById('summary-receiver-name');
+        const progressCount = document.getElementById('progress-count');
+        const progressTotal = document.getElementById('progress-total');
+
         const pinModal = document.getElementById('pin-modal');
         const pinModalCloseButton = document.getElementById('pin-modal-close-button');
         const pinInput = document.getElementById('pin-input');
@@ -226,6 +265,7 @@
         let userId;
         let raffleDocRef;
         let myGiverId = null;
+        let storageAvailable = false; // Added
         let appState = {
             participants: [],
             assignments: []
@@ -239,13 +279,15 @@
                 setTimeout(() => loadingScreen.style.display = 'none', 1000);
             }, 5000); // Original 5-second load
 
+            // 1a. Check for localStorage
+            storageAvailable = isStorageAvailable();
+            if (!storageAvailable) {
+                storageWarning.classList.remove('hidden');
+            }
+
             // 2. Init Firebase
             try {
-                // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // No longer needed for GitHub
-                // const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'); // Old way
-                
-                // --- 1. PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
-                // You get this from your project settings in the Firebase Console
+                // --- 1. YOUR FIREBASE CONFIG OBJECT ---
                 const firebaseConfig = {
                   apiKey: "AIzaSyCefDJ1crR268D_kWRnojQwu89Bt3YKsLk",
                   authDomain: "christmas-elf-622ab.firebaseapp.com",
@@ -261,14 +303,11 @@
                 db = getFirestore(app);
                 setLogLevel('Debug');
                 
-                // --- 2. UPDATE THE DATABASE PATH ---
-                // This creates a simpler path in your new database
+                // --- 2. DATABASE PATH ---
                 raffleDocRef = doc(db, 'raffle', 'main');
 
                 // 3. Sign in
                 loadingText.textContent = 'Autentiškumo patvirtinimas...';
-                // Since this code is for GitHub, we will always sign in anonymously.
-                // The __initial_auth_token is only for the Canvas environment.
                 try {
                     await signInAnonymously(auth);
                     userId = auth.currentUser.uid;
@@ -292,26 +331,25 @@
                 onSnapshot(raffleDocRef, (doc) => {
                     console.log('Raffle data updated');
                     if (doc.exists()) {
-                        // --- FIX ---
-                        // Ensure appState always has the correct shape
-                        const data = doc.data();
+                        const data = doc.data() || {}; // Ensure data is an object
                         appState = {
-                            participants: data.participants || [],
+                            participants: data.participants || PREDEFINED_PARTICIPANTS, // Fallback
                             assignments: data.assignments || []
                         };
-                        // --- END FIX ---
                         renderApp();
                     } else {
                         console.error('Raffle document does not exist!');
                     }
+                }, (error) => {
+                    console.error("Firestore listener error:", error);
+                    loadingText.textContent = 'Error connecting to database.';
+                    loadingSpinner.textContent = '❌';
+                    loadingSpinner.classList.remove('animate-pulse');
                 });
 
             } catch (error) {
                 console.error('Initialization failed:', error);
-                // Check if the error is the one we threw manually
-                if (error.message && error.message.includes("Anonymous sign-in failed")) {
-                    // Auth error already handled, do nothing
-                } else {
+                if (!error.message || !error.message.includes("Anonymous sign-in failed")) {
                     loadingText.textContent = 'Error connecting to the sleigh.';
                     loadingSpinner.classList.remove('animate-pulse');
                     loadingSpinner.textContent = '❌';
@@ -326,31 +364,33 @@
          * Checks if the database has been seeded with participants. If not, seeds it.
          */
         async function seedDatabaseIfNeeded() {
-            const docSnap = await getDoc(raffleDocRef);
-            if (!docSnap.exists()) {
-                console.log('No raffle data found. Seeding database...');
-                loadingText.textContent = 'Building the workshop...';
-                await setDoc(raffleDocRef, {
-                    participants: PREDEFINED_PARTICIPANTS,
-                    assignments: []
-                });
-                console.log('Database seeded.');
-            } else {
-                console.log('Raffle data found.');
-                // OPTIONAL: Check if participant list is different and update
-                const dbParticipants = docSnap.data().participants;
-                if (JSON.stringify(dbParticipants) !== JSON.stringify(PREDEFINED_PARTICIPANTS)) {
-                    console.log('Participant list mismatch. Updating database list.');
-                    // Be careful with this in production, as it could wipe assignments
-                    // For this app, we assume resetting assignments is OK if the list changes.
-                    await updateDoc(raffleDocRef, {
+            try {
+                const docSnap = await getDoc(raffleDocRef);
+                if (!docSnap.exists()) {
+                    console.log('No raffle data found. Seeding database...');
+                    loadingText.textContent = 'Building the workshop...';
+                    await setDoc(raffleDocRef, {
                         participants: PREDEFINED_PARTICIPANTS,
-                        assignments: [] // Reset assignments if participant list changes
+                        assignments: []
                     });
-                    // Clear local storage as assignments are invalid
-                    clearMyAssignmentFromStorage();
-                    myGiverId = null;
+                    console.log('Database seeded.');
+                } else {
+                    console.log('Raffle data found.');
+                    const data = docSnap.data() || {};
+                    const dbParticipants = data.participants || [];
+                    if (JSON.stringify(dbParticipants) !== JSON.stringify(PREDEFINED_PARTICIPANTS)) {
+                        console.log('Participant list mismatch. Updating database list.');
+                        await updateDoc(raffleDocRef, {
+                            participants: PREDEFINED_PARTICIPANTS,
+                            assignments: [] // Reset assignments
+                        });
+                        clearMyAssignmentFromStorage();
+                        myGiverId = null;
+                    }
                 }
+            } catch (error) {
+                console.error("Error seeding database:", error);
+                throw new Error("Could not seed database. Check Firestore permissions.");
             }
         }
 
@@ -359,13 +399,38 @@
          */
         function renderApp() {
             console.log('Rendering app state:', appState);
-            // Check if user has already been assigned
             myGiverId = getMyAssignmentFromStorage();
+            
             if (myGiverId) {
-                // Check if this assignment is still valid
                 const myAssignment = appState.assignments.find(a => a.giverId === myGiverId);
                 if (myAssignment) {
-                    showMyAssignment();
+                    // --- NEW LOGIC ---
+                    // User has an assignment, show the summary card
+                    const giver = appState.participants.find(p => p.id === myAssignment.giverId);
+                    const receiver = appState.participants.find(p => p.id === myAssignment.receiverId);
+
+                    if (giver && receiver) {
+                        // Populate summary card
+                        summaryUserIcon.textContent = giver.icon;
+                        summaryUserName.querySelector('span').textContent = giver.name;
+                        summaryReceiverIcon.textContent = receiver.icon;
+                        summaryReceiverName.textContent = receiver.name;
+                        
+                        // Populate progress
+                        progressCount.textContent = appState.assignments.length;
+                        progressTotal.textContent = appState.participants.length;
+
+                        showCard(summaryCard); // Show the summary card
+                    } else {
+                        // Data is inconsistent, clear storage and show selection
+                        console.warn('Could not find giver/receiver for existing assignment. Clearing storage.');
+                        clearMyAssignmentFromStorage();
+                        myGiverId = null;
+                        populateDropdown();
+                        showCard(selectionCard);
+                    }
+                    // --- END NEW LOGIC ---
+
                 } else {
                     // Assignment was reset
                     console.warn('Assignment no longer in DB. Clearing storage.');
@@ -405,18 +470,17 @@
         }
 
         /**
-         * Finds and displays the user's assignment.
+         * Finds and displays the user's assignment. (Now only for the *first time*)
          * @param {boolean} isNew - Should we play the animation?
-         * @param {object | null} receiverData - Pre-fetched receiver data (to bypass appState race condition)
+         * @param {object | null} receiverData - Pre-fetched receiver data
          */
         function showMyAssignment(isNew = false, receiverData = null) {
             let receiver = receiverData;
 
             if (!receiver) {
-                // This is the "normal" flow, e.g., on page load
                 const myAssignment = appState.assignments.find(a => a.giverId === myGiverId);
                 if (!myAssignment) {
-                    console.warn('I have a giverId in storage, but no assignment in DB. Clearing storage.');
+                    console.warn('I have a giverId, but no assignment in DB. Clearing storage.');
                     clearMyAssignmentFromStorage();
                     renderApp(); // Re-render
                     return;
@@ -425,13 +489,13 @@
             }
             
             if (!receiver) {
-                console.error('Assignment found, but receiver data is missing! This may happen if the participant list was changed.');
-                // Clear bad data and reset
+                console.error('Assignment found, but receiver data is missing!');
                 clearMyAssignmentFromStorage();
                 renderApp();
                 return;
             }
 
+            // Show the ASSIGNMENT card (the one with the animation)
             showCard(assignmentCard);
 
             if (isNew) {
@@ -445,7 +509,7 @@
                     assignmentResult.classList.remove('hidden');
                 }, 1500); // Match animation time
             } else {
-                // Just show result
+                // Just show result (this path is less likely now)
                 receiverIcon.textContent = receiver.icon;
                 receiverName.textContent = receiver.name;
                 assignmentAnimation.classList.add('hidden');
@@ -463,26 +527,23 @@
             assignButton.disabled = true;
             assignButton.textContent = 'Paskirstymas...';
 
-            let finalReceiverId = null; // <-- Variable to store the chosen receiver's ID
+            let finalReceiverId = null; 
 
             try {
-                // Use a Firestore Transaction to prevent race conditions
+                // Use a Firestore Transaction
                 await runTransaction(db, async (transaction) => {
                     const raffleDoc = await transaction.get(raffleDocRef);
                     if (!raffleDoc.exists()) {
                         throw "Document does not exist!";
                     }
 
-                    const currentData = raffleDoc.data();
-                    
-                    // --- FIX: Ensure participants and assignments are arrays ---
+                    const currentData = raffleDoc.data() || {};
                     const participants = currentData.participants || [];
                     const assignments = currentData.assignments || [];
-                    // --- END FIX ---
 
                     // 1. Find all assigned receiver IDs
                     const assignedReceiverIds = new Set(assignments.map(a => a.receiverId));
-                    // 2. Find all assigned giver IDs (to double-check)
+                    // 2. Find all assigned giver IDs
                     const assignedGiverIds = new Set(assignments.map(a => a.giverId));
 
                     // 3. Check if this giver is already taken
@@ -507,7 +568,6 @@
                             console.log("Last person is stuck. Attempting to swap...");
 
                             if (assignments.length === 0) {
-                                // This should be impossible if we're the last person
                                 throw "Last person is stuck, but there are no assignments to swap with.";
                             }
                             
@@ -516,8 +576,7 @@
                             const assignmentToSwap = assignments[swapIndex];
                             
                             // 2. The new receiver for the last person is the receiver from the swapped assignment.
-                            const newReceiverForLastPerson = assignmentToSwap.receiverId;
-                            finalReceiverId = newReceiverForLastPerson; // <-- Store the receiver ID
+                            finalReceiverId = assignmentToSwap.receiverId;
                             
                             // 3. The new receiver for the swapped assignment is the last person (the giver).
                             const newReceiverForSwappedGiver = selectedGiverId;
@@ -525,81 +584,60 @@
                             // 4. Create the new assignment for the last person.
                             const newAssignment = {
                                 giverId: selectedGiverId,
-                                receiverId: finalReceiverId // <-- Use the stored ID
+                                receiverId: finalReceiverId
                             };
                             
                             // 5. Update the swapped assignment *in the array*.
                             assignments[swapIndex].receiverId = newReceiverForSwappedGiver;
                             
                             // 6. Update the document in the transaction
-                            // The 'assignments' array now has the modified swap AND we add the new assignment.
                             transaction.update(raffleDocRef, {
                                 assignments: [...assignments, newAssignment] 
                             });
 
-                            // 7. Save to local storage
-                            myGiverId = selectedGiverId;
-                            saveMyAssignmentToStorage(myGiverId);
-                            // --- END FIX ---
-
                         } else {
-                             // This is a different error
                              throw "No available receivers left for an unknown reason.";
                         }
                     } else {
-                        // --- This is the normal flow (not the last person) ---
+                        // --- This is the normal flow ---
                         // 5. Randomly pick one
-                        const randomReceiverId = availableReceiverIds[Math.floor(Math.random() * availableReceiverIds.length)];
-                        finalReceiverId = randomReceiverId; // <-- Store the receiver ID
+                        finalReceiverId = availableReceiverIds[Math.floor(Math.random() * availableReceiverIds.length)];
 
                         // 6. Create new assignment
                         const newAssignment = {
                             giverId: selectedGiverId,
-                            receiverId: finalReceiverId // <-- Use the stored ID
+                            receiverId: finalReceiverId
                         };
                         
                         // 7. Update the document in the transaction
                         transaction.update(raffleDocRef, {
                             assignments: [...assignments, newAssignment]
                         });
-
-                        // 8. Save to local storage and state
-                        myGiverId = selectedGiverId;
-                        saveMyAssignmentToStorage(myGiverId);
                     }
                 });
 
-                // Success! Transaction committed.
-                // Now we can immediately show the result because we saved the receiver's ID.
+                // --- Transaction Succeeded ---
+                console.log("Transaction successful. Receiver ID:", finalReceiverId);
                 
                 myGiverId = selectedGiverId;
                 saveMyAssignmentToStorage(myGiverId);
 
                 // Find the receiver's data from our (stable) participants list
-                const receiver = appState.participants.find(p => p.id === finalReceiverId);
+                const receiver = appState.participants.find(p => p.id === finalReceiverId); 
 
                 if (receiver) {
-                    // Pass the receiver data directly to showMyAssignment to skip the race condition
+                    // Show the animated result card *once*
                     showMyAssignment(true, receiver);
                 } else {
-                    // This is a fallback, onSnapshot will catch this anyway
-                    console.error("Transaction succeeded but couldn't find receiver data to display!");
-                    // The onSnapshot listener will eventually update and render the app.
+                    console.error("Transaction succeeded but couldn't find receiver data!");
+                    renderApp(); // Fallback to render summary card
                 }
 
             } catch (error) {
                 console.error("Transaction failed: ", error);
-                // Use a simple, non-blocking notification instead of alert()
-                const originalError = error.message || error.toString();
-                if (originalError.includes("alert")) {
-                    console.error("Original error contained 'alert', which is blocked.");
-                } else {
-                     // Check if a custom non-blocking alert can be shown
-                     // For now, log to console and reset button
-                }
-                console.error("Assignment error:", originalError);
+                // alert("Klaida: " + error.toString()); // Avoid alert
                 assignButton.disabled = false;
-                assignButton.textContent = 'See who you are an elf to';
+                assignButton.textContent = 'Spausk ir sužinosi✨'; // Reset text
             }
         }
 
@@ -629,7 +667,7 @@
 
                 console.log('Raffle has been reset.');
                 closePinModal();
-                // onSnapshot will automatically re-render the app to the selection state
+                // onSnapshot will automatically re-render the app
             } catch (error) {
                 console.error("Failed to reset raffle: ", error);
                 pinError.textContent = "Reset failed. Try again.";
@@ -652,6 +690,11 @@
                 if (e.target === pinModal) closePinModal();
             });
             pinSubmitButton.addEventListener('click', handleReset);
+            
+            // New listener for the Back button
+            backButton.addEventListener('click', () => {
+                renderApp(); // This will now show the summary card
+            });
         }
 
         function closePinModal() {
@@ -661,39 +704,56 @@
         }
 
         function showCard(cardToShow) {
-            [selectionCard, assignmentCard, allDoneCard].forEach(card => {
+            // Updated list of all cards
+            [selectionCard, assignmentCard, allDoneCard, summaryCard].forEach(card => {
                 card.classList.add('hidden');
             });
             cardToShow.classList.remove('hidden');
         }
+        
+        function isStorageAvailable() {
+            let storage;
+            try {
+                storage = window['localStorage'];
+                const x = '__storage_test__';
+                storage.setItem(x, x);
+                storage.removeItem(x);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
 
         function saveMyAssignmentToStorage(giverId) {
-            localStorage.setItem('christmasElfGiverId', giverId.toString());
+            if (!storageAvailable) return;
+            try {
+                localStorage.setItem('christmasElfGiverId', giverId.toString());
+            } catch (e) {
+                console.error("Failed to write to localStorage:", e);
+            }
         }
 
         function getMyAssignmentFromStorage() {
-            const id = localStorage.getItem('christmasElfGiverId');
-            return id ? parseInt(id) : null;
+            if (!storageAvailable) return null;
+            try {
+                const id = localStorage.getItem('christmasElfGiverId');
+                return id ? parseInt(id) : null;
+            } catch (e) {
+                console.error("Failed to read from localStorage:", e);
+                return null;
+            }
         }
 
         function clearMyAssignmentFromStorage() {
-            localStorage.removeItem('christmasElfGiverId');
+            if (!storageAvailable) return;
+            try {
+                localStorage.removeItem('christmasElfGiverId');
+            } catch (e) {
+                console.error("Failed to remove from localStorage:", e);
+            }
         }
 
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
