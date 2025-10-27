@@ -117,7 +117,7 @@
                 </div>
             </div>
 
-            <!-- NEW: Card 3: Summary View (Shown if user already picked) -->
+            <!-- Card 3: Summary View (Shown if user already picked) -->
             <div id="summary-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
                 <!-- User's Assignment -->
                 <div class="border-b border-gray-700 pb-4">
@@ -133,6 +133,11 @@
                         <span id="progress-count">...</span> / <span id="progress-total">...</span>
                      </p>
                      <p class="text-gray-400 text-sm">elfų jau paskirta</p>
+                     
+                     <!-- NEW: Go to Export Button -->
+                     <button id="go-to-export-button" class="w-full mt-6 bg-blue-600 text-white font-bold text-lg py-3 rounded-full hover:bg-blue-500 transition-all duration-300">
+                        Išsaugoti / Eksportuoti
+                    </button>
                 </div>
             </div>
 
@@ -142,6 +147,27 @@
                 <p class="text-2xl font-bold text-green-400 mt-4">All Elves Assigned!</p>
                 <p class="text-gray-400 text-lg mt-2">Everyone has a person to gift to. Check with the admin if you need a reset.</p>
             </div>
+
+            <!-- NEW: Card 5: Export View -->
+            <div id="export-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
+                <h2 class="text-2xl font-bold text-green-400">Išsaugoti informaciją</h2>
+                <p class="text-gray-400 text-lg mt-4">Tai tavo slaptas paskyrimas:</p>
+                
+                <p id="export-text" class="text-xl font-bold text-white bg-gray-800 p-4 rounded-lg my-4">
+                    ...
+                </p>
+                
+                <p class="text-gray-500 text-sm mt-6">Atsisiųskite šią informaciją kaip .txt failą, kad nepamirštumėte!</p>
+
+                <button id="export-button" class="w-full mt-4 bg-green-500 text-gray-950 font-bold text-lg py-3 rounded-full shadow-lg shadow-green-500/20 hover:bg-green-400 transition-all duration-300">
+                    Atsisiųsti (.txt)
+                </button>
+
+                <button id="export-back-button" class="w-full mt-4 bg-gray-700 text-gray-200 font-bold text-lg py-3 rounded-full hover:bg-gray-600 transition-all duration-300">
+                    Grįžti į suvestinę
+                </button>
+            </div>
+
 
         </main>
 
@@ -242,10 +268,10 @@
         const receiverIcon = document.getElementById('receiver-icon');
         const receiverName = document.getElementById('receiver-name');
         const resetButton = document.getElementById('admin-reset-button');
-        const storageWarning = document.getElementById('storage-warning'); // Added
-        const backButton = document.getElementById('back-button'); // Added
+        const storageWarning = document.getElementById('storage-warning'); 
+        const backButton = document.getElementById('back-button'); 
         
-        // New Summary Card Elements
+        // Summary Card Elements
         const summaryCard = document.getElementById('summary-card');
         const summaryUserIcon = document.getElementById('summary-user-icon');
         const summaryUserName = document.getElementById('summary-user-name');
@@ -253,6 +279,13 @@
         const summaryReceiverName = document.getElementById('summary-receiver-name');
         const progressCount = document.getElementById('progress-count');
         const progressTotal = document.getElementById('progress-total');
+        const goToExportButton = document.getElementById('go-to-export-button'); // Added
+
+        // Export Card Elements
+        const exportCard = document.getElementById('export-card'); // Added
+        const exportText = document.getElementById('export-text'); // Added
+        const exportButton = document.getElementById('export-button'); // Added
+        const exportBackButton = document.getElementById('export-back-button'); // Added
 
         const pinModal = document.getElementById('pin-modal');
         const pinModalCloseButton = document.getElementById('pin-modal-close-button');
@@ -265,7 +298,7 @@
         let userId;
         let raffleDocRef;
         let myGiverId = null;
-        let storageAvailable = false; // Added
+        let storageAvailable = false; 
         let appState = {
             participants: [],
             assignments: []
@@ -678,6 +711,36 @@
             }
         }
 
+        // --- NEW: Go to Export Page ---
+        function showExportPage() {
+            if (!myGiverId) {
+                renderApp(); // Go back home if something is wrong
+                return;
+            }
+            const myAssignment = appState.assignments.find(a => a.giverId === myGiverId);
+            const giver = appState.participants.find(p => p.id === myAssignment.giverId);
+            const receiver = appState.participants.find(p => p.id === myAssignment.receiverId);
+
+            if (giver && receiver) {
+                exportText.textContent = `Tu esi ${giver.name}. Tavo elfas yra ${receiver.name}. Sėkmės!`;
+                showCard(exportCard);
+            } else {
+                renderApp(); // Go back
+            }
+        }
+        
+        // --- NEW: Handle Export Button ---
+        function handleExport() {
+            const text = exportText.textContent;
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+            element.setAttribute('download', 'KaleduElfas_2025.txt');
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
         // --- UTILITY FUNCTIONS ---
         function setupEventListeners() {
             nameSelect.addEventListener('change', () => {
@@ -691,9 +754,16 @@
             });
             pinSubmitButton.addEventListener('click', handleReset);
             
-            // New listener for the Back button
+            // Listener for the Back button
             backButton.addEventListener('click', () => {
                 renderApp(); // This will now show the summary card
+            });
+
+            // New listeners for Export page
+            goToExportButton.addEventListener('click', showExportPage);
+            exportButton.addEventListener('click', handleExport);
+            exportBackButton.addEventListener('click', () => {
+                renderApp(); // This will show the summary card
             });
         }
 
@@ -705,7 +775,7 @@
 
         function showCard(cardToShow) {
             // Updated list of all cards
-            [selectionCard, assignmentCard, allDoneCard, summaryCard].forEach(card => {
+            [selectionCard, assignmentCard, allDoneCard, summaryCard, exportCard].forEach(card => {
                 card.classList.add('hidden');
             });
             cardToShow.classList.remove('hidden');
