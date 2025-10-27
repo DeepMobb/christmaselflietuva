@@ -117,15 +117,22 @@
         </main>
 
         <!-- Sticky Footer / Action Bar -->
-        <footer class="sticky bottom-0 bg-gray-900 p-4 border-t border-gray-800 shadow-inner">
-            <button 
-                id="reset-button"
-                class="w-full bg-gray-700 text-white font-medium py-2 rounded-full hover:bg-gray-600 transition"
-            >
-                Admin Reset
-            </button>
+        <footer class="sticky bottom-0 bg-gray-900 p-4 border-t border-gray-800 shadow-inner hidden">
+            <!-- This button is no longer used -->
         </footer>
     </div>
+
+
+    <!-- Admin Reset Icon Button -->
+    <button 
+        id="admin-reset-button"
+        class="fixed bottom-6 right-6 bg-gray-700 text-gray-300 p-3 rounded-full shadow-lg hover:bg-gray-600 hover:text-white transition-all duration-300 z-20"
+        aria-label="Admin Reset"
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-1.007 1.11-.1.09.542-.56 1.007-1.11.1zM11.906 15.003c.09-.542.56-1.007 1.11-.1.09.542-.56 1.007-1.11.1zM10.343 21.003c.09-.542.56-1.007 1.11-.1.09.542-.56 1.007-1.11.1zM3.498 8.61c.09-.542.56-1.007 1.11-.1.09.542-.56 1.007-1.11.1zM3.498 15.61c.09-.542.56-1.007 1.11-.1.09.542-.56 1.007-1.11.1zM20.502 8.61c.09-.542.56-1.007 1.11-.1.09.542-.56 1.007-1.11.1zM20.502 15.61c.09-.542.56-1.007 1.11-.1.09.542-.56 1.007-1.11.1zM17.61 4.706a.75.75 0 0 0-1.06 0l-1.414 1.414a.75.75 0 0 0 1.06 1.06l1.414-1.414a.75.75 0 0 0 0-1.06zM6.39 4.706a.75.75 0 0 1 0 1.06L4.975 7.182a.75.75 0 0 1-1.06-1.06L4.975 4.706a.75.75 0 0 1 1.06 0zM17.61 19.294a.75.75 0 0 0-1.06 0l-1.414 1.414a.75.75 0 0 0 1.06 1.06l1.414-1.414a.75.75 0 0 0 0-1.06zM6.39 19.294a.75.75 0 0 1 0 1.06L4.975 21.77a.75.75 0 0 1-1.06-1.06L4.975 19.294a.75.75 0 0 1 1.06 0zM12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9z" />
+        </svg>
+    </button>
 
 
     <!-- PIN Code Modal -->
@@ -206,7 +213,7 @@
         const assignmentResult = document.getElementById('assignment-result');
         const receiverIcon = document.getElementById('receiver-icon');
         const receiverName = document.getElementById('receiver-name');
-        const resetButton = document.getElementById('reset-button');
+        const resetButton = document.getElementById('admin-reset-button');
         
         const pinModal = document.getElementById('pin-modal');
         const pinModalCloseButton = document.getElementById('pin-modal-close-button');
@@ -285,7 +292,14 @@
                 onSnapshot(raffleDocRef, (doc) => {
                     console.log('Raffle data updated');
                     if (doc.exists()) {
-                        appState = doc.data();
+                        // --- FIX ---
+                        // Ensure appState always has the correct shape
+                        const data = doc.data();
+                        appState = {
+                            participants: data.participants || [],
+                            assignments: data.assignments || []
+                        };
+                        // --- END FIX ---
                         renderApp();
                     } else {
                         console.error('Raffle document does not exist!');
@@ -392,17 +406,24 @@
 
         /**
          * Finds and displays the user's assignment.
+         * @param {boolean} isNew - Should we play the animation?
+         * @param {object | null} receiverData - Pre-fetched receiver data (to bypass appState race condition)
          */
-        function showMyAssignment(isNew = false) {
-            const myAssignment = appState.assignments.find(a => a.giverId === myGiverId);
-            if (!myAssignment) {
-                console.warn('I have a giverId in storage, but no assignment in DB. Clearing storage.');
-                clearMyAssignmentFromStorage();
-                renderApp(); // Re-render
-                return;
-            }
+        function showMyAssignment(isNew = false, receiverData = null) {
+            let receiver = receiverData;
 
-            const receiver = appState.participants.find(p => p.id === myAssignment.receiverId);
+            if (!receiver) {
+                // This is the "normal" flow, e.g., on page load
+                const myAssignment = appState.assignments.find(a => a.giverId === myGiverId);
+                if (!myAssignment) {
+                    console.warn('I have a giverId in storage, but no assignment in DB. Clearing storage.');
+                    clearMyAssignmentFromStorage();
+                    renderApp(); // Re-render
+                    return;
+                }
+                receiver = appState.participants.find(p => p.id === myAssignment.receiverId);
+            }
+            
             if (!receiver) {
                 console.error('Assignment found, but receiver data is missing! This may happen if the participant list was changed.');
                 // Clear bad data and reset
@@ -442,6 +463,8 @@
             assignButton.disabled = true;
             assignButton.textContent = 'Assigning...';
 
+            let finalReceiverId = null; // <-- Variable to store the chosen receiver's ID
+
             try {
                 // Use a Firestore Transaction to prevent race conditions
                 await runTransaction(db, async (transaction) => {
@@ -451,8 +474,11 @@
                     }
 
                     const currentData = raffleDoc.data();
-                    const participants = currentData.participants;
-                    const assignments = currentData.assignments;
+                    
+                    // --- FIX: Ensure participants and assignments are arrays ---
+                    const participants = currentData.participants || [];
+                    const assignments = currentData.assignments || [];
+                    // --- END FIX ---
 
                     // 1. Find all assigned receiver IDs
                     const assignedReceiverIds = new Set(assignments.map(a => a.receiverId));
@@ -477,39 +503,89 @@
                         );
 
                         if (unassignedReceivers.size === 1 && unassignedReceivers.has(selectedGiverId)) {
-                            // Last person is stuck with themselves.
-                            // We must allow re-assignment to a random *giver*
-                            // This logic is complex, for now we will just error
-                            console.error("Last person is stuck with themselves!");
-                            throw "No available receivers left! The last person is stuck. Please reset.";
+                            // --- FIX: Last person is stuck, so we must swap assignments ---
+                            console.log("Last person is stuck. Attempting to swap...");
+
+                            if (assignments.length === 0) {
+                                // This should be impossible if we're the last person
+                                throw "Last person is stuck, but there are no assignments to swap with.";
+                            }
+                            
+                            // 1. Pick a random assignment to swap with.
+                            const swapIndex = Math.floor(Math.random() * assignments.length);
+                            const assignmentToSwap = assignments[swapIndex];
+                            
+                            // 2. The new receiver for the last person is the receiver from the swapped assignment.
+                            const newReceiverForLastPerson = assignmentToSwap.receiverId;
+                            finalReceiverId = newReceiverForLastPerson; // <-- Store the receiver ID
+                            
+                            // 3. The new receiver for the swapped assignment is the last person (the giver).
+                            const newReceiverForSwappedGiver = selectedGiverId;
+                            
+                            // 4. Create the new assignment for the last person.
+                            const newAssignment = {
+                                giverId: selectedGiverId,
+                                receiverId: finalReceiverId // <-- Use the stored ID
+                            };
+                            
+                            // 5. Update the swapped assignment *in the array*.
+                            assignments[swapIndex].receiverId = newReceiverForSwappedGiver;
+                            
+                            // 6. Update the document in the transaction
+                            // The 'assignments' array now has the modified swap AND we add the new assignment.
+                            transaction.update(raffleDocRef, {
+                                assignments: [...assignments, newAssignment] 
+                            });
+
+                            // 7. Save to local storage
+                            myGiverId = selectedGiverId;
+                            saveMyAssignmentToStorage(myGiverId);
+                            // --- END FIX ---
+
                         } else {
-                             throw "No available receivers left!";
+                             // This is a different error
+                             throw "No available receivers left for an unknown reason.";
                         }
+                    } else {
+                        // --- This is the normal flow (not the last person) ---
+                        // 5. Randomly pick one
+                        const randomReceiverId = availableReceiverIds[Math.floor(Math.random() * availableReceiverIds.length)];
+                        finalReceiverId = randomReceiverId; // <-- Store the receiver ID
+
+                        // 6. Create new assignment
+                        const newAssignment = {
+                            giverId: selectedGiverId,
+                            receiverId: finalReceiverId // <-- Use the stored ID
+                        };
+                        
+                        // 7. Update the document in the transaction
+                        transaction.update(raffleDocRef, {
+                            assignments: [...assignments, newAssignment]
+                        });
+
+                        // 8. Save to local storage and state
+                        myGiverId = selectedGiverId;
+                        saveMyAssignmentToStorage(myGiverId);
                     }
-
-                    // 5. Randomly pick one
-                    const randomReceiverId = availableReceiverIds[Math.floor(Math.random() * availableReceiverIds.length)];
-
-                    // 6. Create new assignment
-                    const newAssignment = {
-                        giverId: selectedGiverId,
-                        receiverId: randomReceiverId
-                    };
-                    
-                    // 7. Update the document in the transaction
-                    transaction.update(raffleDocRef, {
-                        assignments: [...assignments, newAssignment]
-                    });
-
-                    // 8. Save to local storage and state
-                    myGiverId = selectedGiverId;
-                    saveMyAssignmentToStorage(myGiverId);
                 });
 
                 // Success! Transaction committed.
-                // onSnapshot will trigger a re-render, but we can force it
-                // to show the animation.
-                showMyAssignment(true); 
+                // Now we can immediately show the result because we saved the receiver's ID.
+                
+                myGiverId = selectedGiverId;
+                saveMyAssignmentToStorage(myGiverId);
+
+                // Find the receiver's data from our (stable) participants list
+                const receiver = appState.participants.find(p => p.id === finalReceiverId);
+
+                if (receiver) {
+                    // Pass the receiver data directly to showMyAssignment to skip the race condition
+                    showMyAssignment(true, receiver);
+                } else {
+                    // This is a fallback, onSnapshot will catch this anyway
+                    console.error("Transaction succeeded but couldn't find receiver data to display!");
+                    // The onSnapshot listener will eventually update and render the app.
+                }
 
             } catch (error) {
                 console.error("Transaction failed: ", error);
@@ -607,4 +683,10 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
 
