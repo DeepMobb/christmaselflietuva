@@ -234,24 +234,45 @@
 
             // 2. Init Firebase
             try {
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                // const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // No longer needed for GitHub
+                // const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'); // Old way
+                
+                // --- 1. PASTE YOUR FIREBASE CONFIG OBJECT HERE ---
+                // You get this from your project settings in the Firebase Console
+                const firebaseConfig = {
+                  apiKey: "AIzaSyCefDJ1crR268D_kWRnojQwu89Bt3YKsLk",
+                  authDomain: "christmas-elf-622ab.firebaseapp.com",
+                  projectId: "christmas-elf-622ab",
+                  storageBucket: "christmas-elf-622ab.firebasestorage.app",
+                  messagingSenderId: "185221288883",
+                  appId: "1:185221288883:web:cb6892b023c6c586a4b1c6"
+                };
+                // --- END OF CONFIG ---
+
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
                 setLogLevel('Debug');
-                raffleDocRef = doc(db, 'artifacts', appId, 'public/data/raffle', 'main');
+                
+                // --- 2. UPDATE THE DATABASE PATH ---
+                // This creates a simpler path in your new database
+                raffleDocRef = doc(db, 'raffle', 'main');
 
                 // 3. Sign in
                 loadingText.textContent = 'Authenticating...';
-                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                if (token) {
-                    await signInWithCustomToken(auth, token);
-                } else {
+                // Since this code is for GitHub, we will always sign in anonymously.
+                // The __initial_auth_token is only for the Canvas environment.
+                try {
                     await signInAnonymously(auth);
+                    userId = auth.currentUser.uid;
+                    console.log('Authenticated user:', userId);
+                } catch (authError) {
+                    console.error("Anonymous sign-in failed:", authError);
+                    loadingText.textContent = 'Authentication failed. Please enable anonymous sign-in in your Firebase project.';
+                    loadingSpinner.textContent = '🔒';
+                    loadingSpinner.classList.remove('animate-pulse');
+                    throw authError; // Stop execution if auth fails
                 }
-                userId = auth.currentUser.uid;
-                console.log('Authenticated user:', userId);
 
                 // 4. Check local storage
                 myGiverId = getMyAssignmentFromStorage();
@@ -273,9 +294,14 @@
 
             } catch (error) {
                 console.error('Initialization failed:', error);
-                loadingText.textContent = 'Error connecting to the sleigh.';
-                loadingSpinner.classList.remove('animate-pulse');
-                loadingSpinner.textContent = '❌';
+                // Check if the error is the one we threw manually
+                if (error.message && error.message.includes("Anonymous sign-in failed")) {
+                    // Auth error already handled, do nothing
+                } else {
+                    loadingText.textContent = 'Error connecting to the sleigh.';
+                    loadingSpinner.classList.remove('animate-pulse');
+                    loadingSpinner.textContent = '❌';
+                }
             }
 
             // 7. Add event listeners
