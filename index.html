@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Christmas Elf</title>
+    <title>Kalėdų elfai – 2025</title>
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load Google Font (Inter) -->
@@ -62,8 +62,8 @@
     <!-- Loading Screen -->
     <div id="loading-screen" class="fixed inset-0 bg-gray-950 z-[100] flex flex-col items-center justify-center">
         <div id="loading-spinner" class="text-7xl animate-pulse">🎄</div>
-        <h1 class="text-3xl font-extrabold text-green-400 mt-4">Christmas Elf</h1>
-        <p id="loading-text" class="text-gray-400 text-sm">Getting the sleigh ready...</p>
+        <h1 class="text-3xl font-extrabold text-green-400 mt-4">Kalėdų elfai</h1>
+        <p id="loading-text" class="text-gray-400 text-sm">Rengiant rogės...</p>
     </div>
 
     <!-- Main container -->
@@ -71,8 +71,8 @@
         
         <!-- Header Section -->
         <header class="p-4 border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-10">
-            <h1 class="text-3xl font-extrabold text-green-400">Christmas Elf</h1>
-            <p class="text-gray-400 text-sm">Who will you be a Christmas elf for?</p>
+            <h1 class="text-3xl font-extrabold text-green-400">Kalėdų elfai</h1>
+            <p class="text-gray-400 text-sm">Kam būsi Kalėdų elfė?</p>
         </header>
 
         <!-- Main Content Area -->
@@ -82,7 +82,7 @@
             <div id="selection-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-4 hidden">
                 <label for="name-select" class="block text-sm font-medium text-gray-300 mb-2">Who are you?</label>
                 <select id="name-select" class="w-full bg-gray-800 border-gray-700 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition p-3">
-                    <option value="">-- Select your name --</option>
+                    <option value="">-- Pasirinkite savo vardą --</option>
                     <!-- Options will be dynamically populated -->
                 </select>
                 <button 
@@ -90,20 +90,20 @@
                     class="w-full mt-4 bg-green-500 text-gray-950 font-bold text-lg py-3 rounded-full shadow-lg shadow-green-500/20 hover:bg-green-400 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
                     disabled
                 >
-                    See who you are an elf to
+                    Pažiūrėk, kam esi elfė
                 </button>
             </div>
 
             <!-- Card 2: Show Assignment (After selection) -->
             <div id="assignment-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
-                <p class="text-gray-400 text-lg">You are the Christmas Elf for...</p>
+                <p class="text-gray-400 text-lg">Tu esi Kalėdų elfė...</p>
                 <div id="assignment-animation" class="my-6 flex justify-center hidden">
                     <div class="text-7xl animate-raffle">🎁</div>
                 </div>
                 <div id="assignment-result" class="hidden">
                     <p id="receiver-icon" class="text-7xl mt-4">🎄</p>
                     <p id="receiver-name" class="text-4xl font-extrabold text-teal-400 mt-2">...</p>
-                    <p class="text-gray-500 text-sm mt-6">Happy gifting!</p>
+                    <p class="text-gray-500 text-sm mt-6">Sėkmingo dovanų rinkimo! Turėtumėte rasti dovaną, kuri, jūsų manymu, padarytų tą žmogų laimingą.</p>
                 </div>
             </div>
 
@@ -683,6 +683,7 @@
     </script>
 </body>
 </html>
+
 
 
 
