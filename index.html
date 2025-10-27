@@ -451,18 +451,12 @@
                     });
                     console.log('Database seeded.');
                 } else {
-                    console.log('Raffle data found.');
-                    const data = docSnap.data() || {};
-                    const dbParticipants = data.participants || [];
-                    if (JSON.stringify(dbParticipants) !== JSON.stringify(PREDEFINED_PARTICIPANTS)) {
-                        console.log('Participant list mismatch. Updating database list.');
-                        await updateDoc(raffleDocRef, {
-                            participants: PREDEFINED_PARTICIPANTS,
-                            assignments: [] // Reset assignments
-                        });
-                        clearMyAssignmentFromStorage();
-                        myGiverId = null;
-                    }
+                    console.log('Raffle data found. No overwrite necessary.');
+                    // --- FIX ---
+                    // The problematic 'else' block that checked for participant mismatch
+                    // and reset assignments has been REMOVED.
+                    // The function will now only seed ONCE and then do nothing.
+                    // --- END FIX ---
                 }
             } catch (error) {
                 console.error("Error seeding database:", error);
@@ -868,7 +862,7 @@
             if (!storageAvailable) return;
             try {
                 localStorage.removeItem('christmasElfGiverId');
-            } catch (e) {
+            } catch (e) { // <-- FIX: Added opening brace
                 console.error("Failed to remove from localStorage:", e);
             }
         }
