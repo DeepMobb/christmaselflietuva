@@ -12,46 +12,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
     
     <style>
-        /* Use Inter font, similar to modern UI trends */
+        /* Use Inter font */
         body {
             font-family: 'Inter', sans-serif;
         }
 
         /* Custom animation for the raffle */
         @keyframes spin {
-            0% {
-                transform: rotate(0deg) scale(1);
-                opacity: 1;
-            }
-            50% {
-                transform: rotate(180deg) scale(1.1);
-                opacity: 0.8;
-            }
-            100% {
-                transform: rotate(360deg) scale(1);
-                opacity: 1;
-            }
+            0% { transform: rotate(0deg) scale(1); opacity: 1; }
+            50% { transform: rotate(180deg) scale(1.1); opacity: 0.8; }
+            100% { transform: rotate(360deg) scale(1); opacity: 1; }
         }
         .animate-raffle {
-            animation: spin 1.5s ease-in-out infinite;
+            animation: spin 1.5s ease-in-out; /* Run once, not infinite */
         }
 
         /* Modal transitions for smooth appearance */
-        #modal {
+        .modal {
             transition: opacity 0.3s ease;
         }
-        #modal-content {
+        .modal-content {
             transition: transform 0.3s ease, opacity 0.3s ease;
         }
-        #modal.hidden {
+        .modal.hidden {
             pointer-events: none;
             opacity: 0;
         }
-        #modal.hidden #modal-content {
+        .modal.hidden .modal-content {
             transform: scale(0.95);
             opacity: 0;
         }
-        #modal:not(.hidden) #modal-content {
+        .modal:not(.hidden) .modal-content {
             transform: scale(1);
             opacity: 1;
         }
@@ -70,355 +61,472 @@
 
     <!-- Loading Screen -->
     <div id="loading-screen" class="fixed inset-0 bg-gray-950 z-[100] flex flex-col items-center justify-center">
-        <div class="text-7xl animate-pulse">🎄</div>
+        <div id="loading-spinner" class="text-7xl animate-pulse">🎄</div>
         <h1 class="text-3xl font-extrabold text-green-400 mt-4">Christmas Elf</h1>
-        <p class="text-gray-400 text-sm">Getting the sleigh ready...</p>
+        <p id="loading-text" class="text-gray-400 text-sm">Getting the sleigh ready...</p>
     </div>
 
-    <!-- 
-      Main container, centered and constrained like Twitter's feed.
-      max-w-md makes it mobile-first by default.
-    -->
+    <!-- Main container -->
     <div class="max-w-md mx-auto min-h-screen flex flex-col">
         
         <!-- Header Section -->
         <header class="p-4 border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-10">
             <h1 class="text-3xl font-extrabold text-green-400">Christmas Elf</h1>
-            <p class="text-gray-400 text-sm">Hans loves Monika. Anyways, Who will you be a Christmas elf for?</p>
+            <p class="text-gray-400 text-sm">Who will you be a Christmas elf for?</p>
         </header>
 
         <!-- Main Content Area -->
         <main class="flex-grow p-4">
             
-            <!-- Input Card -->
-            <div class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-4">
-                <form id="add-name-form">
-                    <label for="name-input" class="block text-sm font-medium text-gray-300 mb-1">Add a Name</label>
-                    <div class="flex space-x-2">
-                        <input 
-                            type="text" 
-                            id="name-input" 
-                            placeholder="e.g., Holly, Nick, Carol..." 
-                            class="flex-grow w-full bg-gray-800 border-gray-700 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
-                        >
-                        <button 
-                            type="submit" 
-                            class="bg-green-500 text-gray-950 p-3 rounded-lg shadow-md shadow-green-500/20 hover:bg-green-400 transition duration-200 flex-shrink-0"
-                            aria-label="Add Name"
-                        >
-                            <!-- Plus Icon -->
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                            </svg>
-                        </button>
-                    </div>
-                </form>
+            <!-- Card 1: Select Your Name (Default) -->
+            <div id="selection-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-4 hidden">
+                <label for="name-select" class="block text-sm font-medium text-gray-300 mb-2">Who are you?</label>
+                <select id="name-select" class="w-full bg-gray-800 border-gray-700 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition p-3">
+                    <option value="">-- Select your name --</option>
+                    <!-- Options will be dynamically populated -->
+                </select>
+                <button 
+                    id="assign-button"
+                    class="w-full mt-4 bg-green-500 text-gray-950 font-bold text-lg py-3 rounded-full shadow-lg shadow-green-500/20 hover:bg-green-400 transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+                    disabled
+                >
+                    See who you are an elf to
+                </button>
             </div>
 
-            <!-- Name List -->
-            <div id="name-list" class="mt-4 space-y-2">
-                <!-- Names will be dynamically inserted here -->
-                <!-- Example of a name item:
-                <div class="bg-white rounded-lg shadow-sm p-3 flex items-center justify-between transition-all">
-                    <div class="flex items-center space-x-3">
-                        <span class="text-2xl">🎄</span>
-                        <span class="font-medium text-gray-800">Santa Claus</span>
-                    </div>
-                    <button class="text-gray-400 hover:text-red-600 transition" aria-label="Remove Name">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+            <!-- Card 2: Show Assignment (After selection) -->
+            <div id="assignment-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
+                <p class="text-gray-400 text-lg">You are the Christmas Elf for...</p>
+                <div id="assignment-animation" class="my-6 flex justify-center hidden">
+                    <div class="text-7xl animate-raffle">🎁</div>
                 </div>
-                -->
+                <div id="assignment-result" class="hidden">
+                    <p id="receiver-icon" class="text-7xl mt-4">🎄</p>
+                    <p id="receiver-name" class="text-4xl font-extrabold text-teal-400 mt-2">...</p>
+                    <p class="text-gray-500 text-sm mt-6">Happy gifting!</p>
+                </div>
             </div>
-            
+
+            <!-- Card 3: All assignments done -->
+            <div id="all-done-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
+                <p class="text-7xl">🎉</p>
+                <p class="text-2xl font-bold text-green-400 mt-4">All Elves Assigned!</p>
+                <p class="text-gray-400 text-lg mt-2">Everyone has a person to gift to. Check with the admin if you need a reset.</p>
+            </div>
+
         </main>
 
-        <!-- 
-          Sticky Footer / Action Bar 
-          This mimics the bottom bar or floating "Tweet" button on mobile.
-        -->
+        <!-- Sticky Footer / Action Bar -->
         <footer class="sticky bottom-0 bg-gray-900 p-4 border-t border-gray-800 shadow-inner">
-            <div id="error-message" class="text-red-500 text-center text-sm mb-2 h-4"></div>
             <button 
-                id="raffle-button"
-                class="w-full bg-green-500 text-gray-950 font-bold text-lg py-3 rounded-full shadow-lg shadow-green-500/20 hover:bg-green-400 transition-all duration-300 transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:hover:bg-green-500"
+                id="reset-button"
+                class="w-full bg-gray-700 text-white font-medium py-2 rounded-full hover:bg-gray-600 transition"
             >
-                Start Raffle
+                Admin Reset
             </button>
         </footer>
     </div>
 
 
-    <!-- 
-      Results Modal 
-      This appears on top of everything.
-    -->
-    <div id="modal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 hidden">
-        <div id="modal-content" class="bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative border border-gray-700">
-            
+    <!-- PIN Code Modal -->
+    <div id="pin-modal" class="modal fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 hidden">
+        <div class="modal-content bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative border border-gray-700">
             <!-- Close Button -->
-            <button id="modal-close-button" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 transition" aria-label="Close">
+            <button id="pin-modal-close-button" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 transition" aria-label="Close">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
             </button>
-
-            <h2 class="text-2xl font-bold text-center text-green-400">The Elves Have Spoken!</h2>
+            <h2 class="text-xl font-bold text-center text-green-400">Admin Reset</h2>
+            <p class="text-center text-gray-400 text-sm mt-1">Enter PIN to reset all assignments.</p>
             
-            <!-- Raffle Animation -->
-            <div id="raffle-animation" class="my-8 flex justify-center">
-                <div class="text-7xl animate-raffle">🎁</div>
-            </div>
-
-            <!-- Results List -->
-            <div id="results-list" class="hidden mt-4 space-y-3">
-                <!-- Results will be dynamically inserted here -->
-                <!-- Example of a result item:
-                <div class="bg-amber-50 rounded-lg p-3 text-center">
-                    <span class="font-bold text-green-800 text-lg">🦌 Rudolph</span>
-                    <span class="block text-sm text-gray-500">is giving to</span>
-                    <span class="font-bold text-red-800 text-lg">🎄 Santa</span>
-                </div>
-                -->
-            </div>
-
-            <!-- Start Over Button -->
-            <button 
-                id="start-over-button"
-                class="w-full bg-gray-700 text-white font-medium py-2 rounded-full mt-6 hover:bg-gray-600 transition"
+            <input 
+                type="password" 
+                id="pin-input" 
+                inputmode="numeric"
+                class="w-full text-center text-2xl tracking-widest bg-gray-800 border-gray-700 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition p-3 mt-4"
+                maxlength="4"
             >
-                Start a New List
+            <div id="pin-error" class="text-red-500 text-center text-sm mt-2 h-4"></div>
+            <button 
+                id="pin-submit-button"
+                class="w-full mt-2 bg-red-600 text-white font-bold py-3 rounded-full hover:bg-red-500 transition"
+            >
+                Confirm Reset
             </button>
         </div>
     </div>
 
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            
-            // --- STATE ---
-            let names = [];
-            const icons = ['🎄', '🎁', '🦌', '🍁', '☃️', '🎅', '🤶', '🔔'];
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            signInWithCustomToken, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc, 
+            setDoc, 
+            updateDoc, 
+            onSnapshot,
+            runTransaction,
+            setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-            // --- DOM ELEMENTS ---
-            const nameForm = document.getElementById('add-name-form');
-            const nameInput = document.getElementById('name-input');
-            const nameList = document.getElementById('name-list');
-            const raffleButton = document.getElementById('raffle-button');
-            const errorMessage = document.getElementById('error-message');
-            
-            const modal = document.getElementById('modal');
-            const modalContent = document.getElementById('modal-content');
-            const modalCloseButton = document.getElementById('modal-close-button');
-            const raffleAnimation = document.getElementById('raffle-animation');
-            const resultsList = document.getElementById('results-list');
-            const startOverButton = document.getElementById('start-over-button');
+        // --- PRE-DEFINED DATA ---
+        // This list will be used to 'seed' the database the first time the app is run.
+        const PREDEFINED_PARTICIPANTS = [
+            { id: 1, name: 'Rudolph', icon: '🦌' },
+            { id: 2, name: 'Mrs. Claus', icon: '🤶' },
+            { id: 3, name: 'Frosty', icon: '☃️' },
+            { id: 4, name: 'Noel', icon: '🎄' },
+            { id: 5, name: 'Comet', icon: '☄️' },
+            { id: 6, name: 'Buddy the Elf', icon: '🧑‍🎄' },
+            { id: 7, name: 'Santa', icon: '🎅' }
+        ];
 
-            // --- LOADING SCREEN ---
-            const loadingScreen = document.getElementById('loading-screen');
+        // --- DOM ELEMENTS ---
+        const loadingScreen = document.getElementById('loading-screen');
+        const loadingText = document.getElementById('loading-text');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const selectionCard = document.getElementById('selection-card');
+        const assignmentCard = document.getElementById('assignment-card');
+        const allDoneCard = document.getElementById('all-done-card');
+        const nameSelect = document.getElementById('name-select');
+        const assignButton = document.getElementById('assign-button');
+        const assignmentAnimation = document.getElementById('assignment-animation');
+        const assignmentResult = document.getElementById('assignment-result');
+        const receiverIcon = document.getElementById('receiver-icon');
+        const receiverName = document.getElementById('receiver-name');
+        const resetButton = document.getElementById('reset-button');
+        
+        const pinModal = document.getElementById('pin-modal');
+        const pinModalCloseButton = document.getElementById('pin-modal-close-button');
+        const pinInput = document.getElementById('pin-input');
+        const pinError = document.getElementById('pin-error');
+        const pinSubmitButton = document.getElementById('pin-submit-button');
+
+        // --- FIREBASE & APP STATE ---
+        let app, auth, db;
+        let userId;
+        let raffleDocRef;
+        let myGiverId = null;
+        let appState = {
+            participants: [],
+            assignments: []
+        };
+
+        // --- INITIALIZE APP ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. Show loading screen
             setTimeout(() => {
                 loadingScreen.classList.add('fade-out');
-                setTimeout(() => {
-                    loadingScreen.style.display = 'none';
-                }, 1000); // 1s to match CSS transition
-            }, 5000); // 5 seconds
+                setTimeout(() => loadingScreen.style.display = 'none', 1000);
+            }, 5000); // Original 5-second load
 
-            // --- FUNCTIONS ---
+            // 2. Init Firebase
+            try {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                setLogLevel('Debug');
+                raffleDocRef = doc(db, 'artifacts', appId, 'public/data/raffle', 'main');
 
-            /**
-             * Gets a random icon from the list.
-             */
-            function getRandomIcon() {
-                return icons[Math.floor(Math.random() * icons.length)];
-            }
-
-            /**
-             * Re-renders the list of names from the state.
-             */
-            function renderNames() {
-                nameList.innerHTML = '';
-                if (names.length === 0) {
-                    nameList.innerHTML = `<p class="text-center text-gray-600 italic mt-4">Add some names to the list...</p>`;
-                }
-
-                names.forEach(person => {
-                    const personEl = document.createElement('div');
-                    personEl.className = 'bg-gray-900 rounded-lg shadow-sm p-3 flex items-center justify-between transition-all duration-300 border border-gray-800';
-                    personEl.innerHTML = `
-                        <div class="flex items-center space-x-3">
-                            <span class="text-2xl">${person.icon}</span>
-                            <span class="font-medium text-gray-100 break-all">${escapeHTML(person.text)}</span>
-                        </div>
-                        <button class="delete-btn text-gray-600 hover:text-red-500 transition" data-id="${person.id}" aria-label="Remove ${person.text}">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 pointer-events-none">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    `;
-                    nameList.appendChild(personEl);
-                });
-
-                // Re-attach delete listeners
-                document.querySelectorAll('.delete-btn').forEach(btn => {
-                    btn.addEventListener('click', deleteName);
-                });
-
-                updateRaffleButtonState();
-            }
-
-            /**
-             * Updates the state and style of the main raffle button.
-             */
-            function updateRaffleButtonState() {
-                // We need at least 2 people for a gift exchange loop.
-                if (names.length < 2) {
-                    raffleButton.disabled = true;
-                    errorMessage.textContent = 'Add at least 2 people to start.';
+                // 3. Sign in
+                loadingText.textContent = 'Authenticating...';
+                const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                if (token) {
+                    await signInWithCustomToken(auth, token);
                 } else {
-                    raffleButton.disabled = false;
-                    errorMessage.textContent = '';
+                    await signInAnonymously(auth);
                 }
-            }
+                userId = auth.currentUser.uid;
+                console.log('Authenticated user:', userId);
 
-            /**
-             * Handles the form submission to add a new name.
-             */
-            function handleAddName(e) {
-                e.preventDefault();
-                const nameText = nameInput.value.trim();
-                
-                if (nameText) {
-                    names.push({
-                        id: Date.now(),
-                        text: nameText,
-                        icon: getRandomIcon()
-                    });
-                    nameInput.value = '';
-                    renderNames();
-                }
-            }
+                // 4. Check local storage
+                myGiverId = getMyAssignmentFromStorage();
 
-            /**
-             * Handles clicking the 'X' to delete a name.
-             */
-            function deleteName(e) {
-                const idToDelete = parseInt(e.target.dataset.id);
-                names = names.filter(person => person.id !== idToDelete);
-                renderNames();
-            }
+                // 5. Seed DB if needed
+                loadingText.textContent = 'Fetching the list...';
+                await seedDatabaseIfNeeded();
 
-            /**
-             * Shows the modal.
-             */
-            function showModal() {
-                modal.classList.remove('hidden');
-            }
-
-            /**
-             * Hides the modal.
-             */
-            function closeModal() {
-                modal.classList.add('hidden');
-            }
-
-            /**
-             * Handles the main raffle logic.
-             */
-            function startRaffle() {
-                // 1. Show modal and animation
-                showModal();
-                raffleAnimation.style.display = 'flex';
-                resultsList.style.display = 'none';
-                resultsList.innerHTML = ''; // Clear old results
-
-                // 2. Run pairing logic after animation
-                setTimeout(() => {
-                    // Fisher-Yates shuffle
-                    const shuffled = [...names];
-                    for (let i = shuffled.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                // 6. Set up real-time listener
+                onSnapshot(raffleDocRef, (doc) => {
+                    console.log('Raffle data updated');
+                    if (doc.exists()) {
+                        appState = doc.data();
+                        renderApp();
+                    } else {
+                        console.error('Raffle document does not exist!');
                     }
-
-                    // Create the gift loop
-                    const pairs = [];
-                    for (let i = 0; i < shuffled.length; i++) {
-                        const giver = shuffled[i];
-                        const receiver = shuffled[(i + 1) % shuffled.length]; // Loop back to start
-                        pairs.push({ giver, receiver });
-                    }
-
-                    // 3. Render results
-                    renderResults(pairs);
-                    
-                    // 4. Hide animation, show results
-                    raffleAnimation.style.display = 'none';
-                    resultsList.style.display = 'block';
-
-                }, 2500); // 2.5 second animation
-            }
-
-            /**
-             * Renders the final pairings into the modal.
-             */
-            function renderResults(pairs) {
-                pairs.forEach(pair => {
-                    const pairEl = document.createElement('div');
-                    pairEl.className = 'bg-gray-800 rounded-lg p-3 text-center';
-                    pairEl.innerHTML = `
-                        <span class="font-bold text-green-400 text-lg">${pair.giver.icon} ${escapeHTML(pair.giver.text)}</span>
-                        <span class="block text-sm text-gray-400">is giving to</span>
-                        <span class="font-bold text-teal-400 text-lg">${pair.receiver.icon} ${escapeHTML(pair.receiver.text)}</span>
-                    `;
-                    resultsList.appendChild(pairEl);
                 });
+
+            } catch (error) {
+                console.error('Initialization failed:', error);
+                loadingText.textContent = 'Error connecting to the sleigh.';
+                loadingSpinner.classList.remove('animate-pulse');
+                loadingSpinner.textContent = '❌';
             }
 
-            /**
-             * Resets the app to its initial state.
-             */
-            function handleStartOver() {
-                names = [];
-                renderNames();
-                closeModal();
-            }
-
-            /**
-             * Utility to prevent XSS.
-             */
-            function escapeHTML(str) {
-                return str.replace(/[&<>"']/g, function(m) {
-                    return {
-                        '&': '&amp;',
-                        '<': '&lt;',
-                        '>': '&gt;',
-                        '"': '&quot;',
-                        "'": '&#039;'
-                    }[m];
-                });
-            }
-
-            // --- EVENT LISTENERS ---
-            nameForm.addEventListener('submit', handleAddName);
-            raffleButton.addEventListener('click', startRaffle);
-            modalCloseButton.addEventListener('click', closeModal);
-            startOverButton.addEventListener('click', handleStartOver);
-            
-            // Close modal if clicking on the background
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-
-            // --- INITIALIZE ---
-            renderNames();
+            // 7. Add event listeners
+            setupEventListeners();
         });
-    </script>
 
+        /**
+         * Checks if the database has been seeded with participants. If not, seeds it.
+         */
+        async function seedDatabaseIfNeeded() {
+            const docSnap = await getDoc(raffleDocRef);
+            if (!docSnap.exists()) {
+                console.log('No raffle data found. Seeding database...');
+                loadingText.textContent = 'Building the workshop...';
+                await setDoc(raffleDocRef, {
+                    participants: PREDEFINED_PARTICIPANTS,
+                    assignments: []
+                });
+                console.log('Database seeded.');
+            } else {
+                console.log('Raffle data found.');
+            }
+        }
+
+        /**
+         * Main render function, called on load and on data updates.
+         */
+        function renderApp() {
+            console.log('Rendering app state:', appState);
+            // Check if user has already been assigned
+            myGiverId = getMyAssignmentFromStorage();
+            if (myGiverId) {
+                showMyAssignment();
+            } else {
+                // User has not been assigned, show selection
+                populateDropdown();
+                showCard(selectionCard);
+            }
+        }
+
+        /**
+         * Populates the dropdown with *available* givers.
+         */
+        function populateDropdown() {
+            const assignedGiverIds = new Set(appState.assignments.map(a => a.giverId));
+            const availableParticipants = appState.participants.filter(p => !assignedGiverIds.has(p.id));
+
+            nameSelect.innerHTML = '<option value="">-- Select your name --</option>'; // Reset
+            
+            if (availableParticipants.length === 0) {
+                // All assignments are done
+                showCard(allDoneCard);
+            } else {
+                availableParticipants.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = `${p.icon} ${p.name}`;
+                    nameSelect.appendChild(option);
+                });
+                showCard(selectionCard);
+            }
+        }
+
+        /**
+         * Finds and displays the user's assignment.
+         */
+        function showMyAssignment(isNew = false) {
+            const myAssignment = appState.assignments.find(a => a.giverId === myGiverId);
+            if (!myAssignment) {
+                console.warn('I have a giverId in storage, but no assignment in DB. Clearing storage.');
+                clearMyAssignmentFromStorage();
+                renderApp(); // Re-render
+                return;
+            }
+
+            const receiver = appState.participants.find(p => p.id === myAssignment.receiverId);
+            if (!receiver) {
+                console.error('Assignment found, but receiver data is missing!');
+                return;
+            }
+
+            showCard(assignmentCard);
+
+            if (isNew) {
+                // Show animation
+                assignmentResult.classList.add('hidden');
+                assignmentAnimation.classList.remove('hidden');
+                setTimeout(() => {
+                    receiverIcon.textContent = receiver.icon;
+                    receiverName.textContent = receiver.name;
+                    assignmentAnimation.classList.add('hidden');
+                    assignmentResult.classList.remove('hidden');
+                }, 1500); // Match animation time
+            } else {
+                // Just show result
+                receiverIcon.textContent = receiver.icon;
+                receiverName.textContent = receiver.name;
+                assignmentAnimation.classList.add('hidden');
+                assignmentResult.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Handles the "See who you are an elf to" button click.
+         */
+        async function handleAssignElf() {
+            const selectedGiverId = parseInt(nameSelect.value);
+            if (!selectedGiverId) return;
+
+            assignButton.disabled = true;
+            assignButton.textContent = 'Assigning...';
+
+            try {
+                // Use a Firestore Transaction to prevent race conditions
+                await runTransaction(db, async (transaction) => {
+                    const raffleDoc = await transaction.get(raffleDocRef);
+                    if (!raffleDoc.exists()) {
+                        throw "Document does not exist!";
+                    }
+
+                    const currentData = raffleDoc.data();
+                    const participants = currentData.participants;
+                    const assignments = currentData.assignments;
+
+                    // 1. Find all assigned receiver IDs
+                    const assignedReceiverIds = new Set(assignments.map(a => a.receiverId));
+                    // 2. Find all assigned giver IDs (to double-check)
+                    const assignedGiverIds = new Set(assignments.map(a => a.giverId));
+
+                    // 3. Check if this giver is already taken
+                    if (assignedGiverIds.has(selectedGiverId)) {
+                        throw "This name has already been taken. Please refresh.";
+                    }
+                    
+                    // 4. Find all *available* receivers
+                    const availableReceiverIds = participants
+                        .map(p => p.id)
+                        .filter(id => id !== selectedGiverId && !assignedReceiverIds.has(id));
+
+                    if (availableReceiverIds.length === 0) {
+                        // This should ideally not be hit if dropdown is correct, but good failsafe
+                        throw "No available receivers left!";
+                    }
+
+                    // 5. Randomly pick one
+                    const randomReceiverId = availableReceiverIds[Math.floor(Math.random() * availableReceiverIds.length)];
+
+                    // 6. Create new assignment
+                    const newAssignment = {
+                        giverId: selectedGiverId,
+                        receiverId: randomReceiverId
+                    };
+                    
+                    // 7. Update the document in the transaction
+                    transaction.update(raffleDocRef, {
+                        assignments: [...assignments, newAssignment]
+                    });
+
+                    // 8. Save to local storage and state
+                    myGiverId = selectedGiverId;
+                    saveMyAssignmentToStorage(myGiverId);
+                });
+
+                // Success! Transaction committed.
+                // onSnapshot will trigger a re-render, but we can force it
+                // to show the animation.
+                showMyAssignment(true); 
+
+            } catch (error) {
+                console.error("Transaction failed: ", error);
+                alert("Oops! Someone might have just picked a name. Please try again.");
+                assignButton.disabled = false;
+                assignButton.textContent = 'See who you are an elf to';
+            }
+        }
+
+        /**
+         * Handles the "Admin Reset" button click.
+         */
+        async function handleReset() {
+            const pin = pinInput.value;
+            if (pin !== "1909") {
+                pinError.textContent = "Incorrect PIN.";
+                return;
+            }
+
+            pinError.textContent = "";
+            pinSubmitButton.disabled = true;
+            pinSubmitButton.textContent = "Resetting...";
+
+            try {
+                // Update Firestore: set assignments to an empty array
+                await updateDoc(raffleDocRef, {
+                    assignments: []
+                });
+
+                // Clear local storage
+                clearMyAssignmentFromStorage();
+                myGiverId = null;
+
+                console.log('Raffle has been reset.');
+                closePinModal();
+                // onSnapshot will automatically re-render the app to the selection state
+            } catch (error) {
+                console.error("Failed to reset raffle: ", error);
+                pinError.textContent = "Reset failed. Try again.";
+            } finally {
+                pinSubmitButton.disabled = false;
+                pinSubmitButton.textContent = "Confirm Reset";
+                pinInput.value = "";
+            }
+        }
+
+        // --- UTILITY FUNCTIONS ---
+        function setupEventListeners() {
+            nameSelect.addEventListener('change', () => {
+                assignButton.disabled = !nameSelect.value;
+            });
+            assignButton.addEventListener('click', handleAssignElf);
+            resetButton.addEventListener('click', () => pinModal.classList.remove('hidden'));
+            pinModalCloseButton.addEventListener('click', closePinModal);
+            pinModal.addEventListener('click', (e) => {
+                if (e.target === pinModal) closePinModal();
+            });
+            pinSubmitButton.addEventListener('click', handleReset);
+        }
+
+        function closePinModal() {
+            pinModal.classList.add('hidden');
+            pinInput.value = "";
+            pinError.textContent = "";
+        }
+
+        function showCard(cardToShow) {
+            [selectionCard, assignmentCard, allDoneCard].forEach(card => {
+                card.classList.add('hidden');
+            });
+            cardToShow.classList.remove('hidden');
+        }
+
+        function saveMyAssignmentToStorage(giverId) {
+            localStorage.setItem('christmasElfGiverId', giverId.toString());
+        }
+
+        function getMyAssignmentFromStorage() {
+            const id = localStorage.getItem('christmasElfGiverId');
+            return id ? parseInt(id) : null;
+        }
+
+        function clearMyAssignmentFromStorage() {
+            localStorage.removeItem('christmasElfGiverId');
+        }
+
+    </script>
 </body>
 </html>
-
 
