@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Elf</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Google Font (Inter) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Use Inter font, similar to modern UI trends */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom animation for the raffle */
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg) scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: rotate(180deg) scale(1.1);
+                opacity: 0.8;
+            }
+            100% {
+                transform: rotate(360deg) scale(1);
+                opacity: 1;
+            }
+        }
+        .animate-raffle {
+            animation: spin 1.5s ease-in-out infinite;
+        }
+
+        /* Modal transitions for smooth appearance */
+        #modal {
+            transition: opacity 0.3s ease;
+        }
+        #modal-content {
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        #modal.hidden {
+            pointer-events: none;
+            opacity: 0;
+        }
+        #modal.hidden #modal-content {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        #modal:not(.hidden) #modal-content {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        /* CSS for loading screen fade-out */
+        #loading-screen {
+            transition: opacity 1s ease-out;
+        }
+        #loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100">
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-gray-950 z-[100] flex flex-col items-center justify-center">
+        <div class="text-7xl animate-pulse">🎄</div>
+        <h1 class="text-3xl font-extrabold text-green-400 mt-4">Christmas Elf</h1>
+        <p class="text-gray-400 text-sm">Getting the sleigh ready...</p>
+    </div>
+
+    <!-- 
+      Main container, centered and constrained like Twitter's feed.
+      max-w-md makes it mobile-first by default.
+    -->
+    <div class="max-w-md mx-auto min-h-screen flex flex-col">
+        
+        <!-- Header Section -->
+        <header class="p-4 border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-10">
+            <h1 class="text-3xl font-extrabold text-green-400">Christmas Elf</h1>
+            <p class="text-gray-400 text-sm">Who will you be a Christmas elf for?</p>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow p-4">
+            
+            <!-- Input Card -->
+            <div class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-4">
+                <form id="add-name-form">
+                    <label for="name-input" class="block text-sm font-medium text-gray-300 mb-1">Add a Name</label>
+                    <div class="flex space-x-2">
+                        <input 
+                            type="text" 
+                            id="name-input" 
+                            placeholder="e.g., Holly, Nick, Carol..." 
+                            class="flex-grow w-full bg-gray-800 border-gray-700 text-white rounded-lg shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+                        >
+                        <button 
+                            type="submit" 
+                            class="bg-green-500 text-gray-950 p-3 rounded-lg shadow-md shadow-green-500/20 hover:bg-green-400 transition duration-200 flex-shrink-0"
+                            aria-label="Add Name"
+                        >
+                            <!-- Plus Icon -->
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Name List -->
+            <div id="name-list" class="mt-4 space-y-2">
+                <!-- Names will be dynamically inserted here -->
+                <!-- Example of a name item:
+                <div class="bg-white rounded-lg shadow-sm p-3 flex items-center justify-between transition-all">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">🎄</span>
+                        <span class="font-medium text-gray-800">Santa Claus</span>
+                    </div>
+                    <button class="text-gray-400 hover:text-red-600 transition" aria-label="Remove Name">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                -->
+            </div>
+            
+        </main>
+
+        <!-- 
+          Sticky Footer / Action Bar 
+          This mimics the bottom bar or floating "Tweet" button on mobile.
+        -->
+        <footer class="sticky bottom-0 bg-gray-900 p-4 border-t border-gray-800 shadow-inner">
+            <div id="error-message" class="text-red-500 text-center text-sm mb-2 h-4"></div>
+            <button 
+                id="raffle-button"
+                class="w-full bg-green-500 text-gray-950 font-bold text-lg py-3 rounded-full shadow-lg shadow-green-500/20 hover:bg-green-400 transition-all duration-300 transform hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:hover:bg-green-500"
+            >
+                Start Raffle
+            </button>
+        </footer>
+    </div>
+
+
+    <!-- 
+      Results Modal 
+      This appears on top of everything.
+    -->
+    <div id="modal" class="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 hidden">
+        <div id="modal-content" class="bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative border border-gray-700">
+            
+            <!-- Close Button -->
+            <button id="modal-close-button" class="absolute top-3 right-3 text-gray-500 hover:text-gray-300 transition" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <h2 class="text-2xl font-bold text-center text-green-400">The Elves Have Spoken!</h2>
+            
+            <!-- Raffle Animation -->
+            <div id="raffle-animation" class="my-8 flex justify-center">
+                <div class="text-7xl animate-raffle">🎁</div>
+            </div>
+
+            <!-- Results List -->
+            <div id="results-list" class="hidden mt-4 space-y-3">
+                <!-- Results will be dynamically inserted here -->
+                <!-- Example of a result item:
+                <div class="bg-amber-50 rounded-lg p-3 text-center">
+                    <span class="font-bold text-green-800 text-lg">🦌 Rudolph</span>
+                    <span class="block text-sm text-gray-500">is giving to</span>
+                    <span class="font-bold text-red-800 text-lg">🎄 Santa</span>
+                </div>
+                -->
+            </div>
+
+            <!-- Start Over Button -->
+            <button 
+                id="start-over-button"
+                class="w-full bg-gray-700 text-white font-medium py-2 rounded-full mt-6 hover:bg-gray-600 transition"
+            >
+                Start a New List
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            // --- STATE ---
+            let names = [];
+            const icons = ['🎄', '🎁', '🦌', '🍁', '☃️', '🎅', '🤶', '🔔'];
+
+            // --- DOM ELEMENTS ---
+            const nameForm = document.getElementById('add-name-form');
+            const nameInput = document.getElementById('name-input');
+            const nameList = document.getElementById('name-list');
+            const raffleButton = document.getElementById('raffle-button');
+            const errorMessage = document.getElementById('error-message');
+            
+            const modal = document.getElementById('modal');
+            const modalContent = document.getElementById('modal-content');
+            const modalCloseButton = document.getElementById('modal-close-button');
+            const raffleAnimation = document.getElementById('raffle-animation');
+            const resultsList = document.getElementById('results-list');
+            const startOverButton = document.getElementById('start-over-button');
+
+            // --- LOADING SCREEN ---
+            const loadingScreen = document.getElementById('loading-screen');
+            setTimeout(() => {
+                loadingScreen.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 1000); // 1s to match CSS transition
+            }, 5000); // 5 seconds
+
+            // --- FUNCTIONS ---
+
+            /**
+             * Gets a random icon from the list.
+             */
+            function getRandomIcon() {
+                return icons[Math.floor(Math.random() * icons.length)];
+            }
+
+            /**
+             * Re-renders the list of names from the state.
+             */
+            function renderNames() {
+                nameList.innerHTML = '';
+                if (names.length === 0) {
+                    nameList.innerHTML = `<p class="text-center text-gray-600 italic mt-4">Add some names to the list...</p>`;
+                }
+
+                names.forEach(person => {
+                    const personEl = document.createElement('div');
+                    personEl.className = 'bg-gray-900 rounded-lg shadow-sm p-3 flex items-center justify-between transition-all duration-300 border border-gray-800';
+                    personEl.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <span class="text-2xl">${person.icon}</span>
+                            <span class="font-medium text-gray-100 break-all">${escapeHTML(person.text)}</span>
+                        </div>
+                        <button class="delete-btn text-gray-600 hover:text-red-500 transition" data-id="${person.id}" aria-label="Remove ${person.text}">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 pointer-events-none">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    `;
+                    nameList.appendChild(personEl);
+                });
+
+                // Re-attach delete listeners
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', deleteName);
+                });
+
+                updateRaffleButtonState();
+            }
+
+            /**
+             * Updates the state and style of the main raffle button.
+             */
+            function updateRaffleButtonState() {
+                // We need at least 2 people for a gift exchange loop.
+                if (names.length < 2) {
+                    raffleButton.disabled = true;
+                    errorMessage.textContent = 'Add at least 2 people to start.';
+                } else {
+                    raffleButton.disabled = false;
+                    errorMessage.textContent = '';
+                }
+            }
+
+            /**
+             * Handles the form submission to add a new name.
+             */
+            function handleAddName(e) {
+                e.preventDefault();
+                const nameText = nameInput.value.trim();
+                
+                if (nameText) {
+                    names.push({
+                        id: Date.now(),
+                        text: nameText,
+                        icon: getRandomIcon()
+                    });
+                    nameInput.value = '';
+                    renderNames();
+                }
+            }
+
+            /**
+             * Handles clicking the 'X' to delete a name.
+             */
+            function deleteName(e) {
+                const idToDelete = parseInt(e.target.dataset.id);
+                names = names.filter(person => person.id !== idToDelete);
+                renderNames();
+            }
+
+            /**
+             * Shows the modal.
+             */
+            function showModal() {
+                modal.classList.remove('hidden');
+            }
+
+            /**
+             * Hides the modal.
+             */
+            function closeModal() {
+                modal.classList.add('hidden');
+            }
+
+            /**
+             * Handles the main raffle logic.
+             */
+            function startRaffle() {
+                // 1. Show modal and animation
+                showModal();
+                raffleAnimation.style.display = 'flex';
+                resultsList.style.display = 'none';
+                resultsList.innerHTML = ''; // Clear old results
+
+                // 2. Run pairing logic after animation
+                setTimeout(() => {
+                    // Fisher-Yates shuffle
+                    const shuffled = [...names];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+
+                    // Create the gift loop
+                    const pairs = [];
+                    for (let i = 0; i < shuffled.length; i++) {
+                        const giver = shuffled[i];
+                        const receiver = shuffled[(i + 1) % shuffled.length]; // Loop back to start
+                        pairs.push({ giver, receiver });
+                    }
+
+                    // 3. Render results
+                    renderResults(pairs);
+                    
+                    // 4. Hide animation, show results
+                    raffleAnimation.style.display = 'none';
+                    resultsList.style.display = 'block';
+
+                }, 2500); // 2.5 second animation
+            }
+
+            /**
+             * Renders the final pairings into the modal.
+             */
+            function renderResults(pairs) {
+                pairs.forEach(pair => {
+                    const pairEl = document.createElement('div');
+                    pairEl.className = 'bg-gray-800 rounded-lg p-3 text-center';
+                    pairEl.innerHTML = `
+                        <span class="font-bold text-green-400 text-lg">${pair.giver.icon} ${escapeHTML(pair.giver.text)}</span>
+                        <span class="block text-sm text-gray-400">is giving to</span>
+                        <span class="font-bold text-teal-400 text-lg">${pair.receiver.icon} ${escapeHTML(pair.receiver.text)}</span>
+                    `;
+                    resultsList.appendChild(pairEl);
+                });
+            }
+
+            /**
+             * Resets the app to its initial state.
+             */
+            function handleStartOver() {
+                names = [];
+                renderNames();
+                closeModal();
+            }
+
+            /**
+             * Utility to prevent XSS.
+             */
+            function escapeHTML(str) {
+                return str.replace(/[&<>"']/g, function(m) {
+                    return {
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#039;'
+                    }[m];
+                });
+            }
+
+            // --- EVENT LISTENERS ---
+            nameForm.addEventListener('submit', handleAddName);
+            raffleButton.addEventListener('click', startRaffle);
+            modalCloseButton.addEventListener('click', closeModal);
+            startOverButton.addEventListener('click', handleStartOver);
+            
+            // Close modal if clicking on the background
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+
+            // --- INITIALIZE ---
+            renderNames();
+        });
+    </script>
+
+</body>
+</html>
+
