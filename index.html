@@ -59,8 +59,27 @@
 </head>
 <body class="bg-gray-950 text-gray-100">
 
-    <!-- Loading Screen -->
-    <div id="loading-screen" class="fixed inset-0 bg-gray-950 z-[100] flex flex-col items-center justify-center">
+    <!-- NEW: Consent Modal -->
+    <div id="consent-modal" class="modal fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-[200]">
+        <div class="modal-content bg-gray-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative border border-gray-700">
+            <h2 class="text-xl font-bold text-center text-green-400">Sveiki atvykę!</h2>
+            <p class="text-center text-gray-400 text-sm mt-2">
+                Kad programėlė veiktų tinkamai ir prisimintų jūsų pasirinkimą, ji turi išsaugoti duomenis jūsų naršyklės saugykloje (Local Storage).
+            </p>
+            <p class="text-center text-gray-500 text-xs mt-2">
+                (Tai neveiks "Incognito" arba "Privataus" naršymo režimuose).
+            </p>
+            <button 
+                id="consent-agree-button"
+                class="w-full mt-4 bg-green-500 text-gray-950 font-bold py-3 rounded-full hover:bg-green-400 transition"
+            >
+                Supratau ir Sutinku
+            </button>
+        </div>
+    </div>
+    
+    <!-- Loading Screen (Now hidden initially) -->
+    <div id="loading-screen" class="fixed inset-0 bg-gray-950 z-[100] flex flex-col items-center justify-center hidden">
         <div id="loading-spinner" class="text-7xl animate-pulse">🎄</div>
         <h1 class="text-3xl font-extrabold text-green-400 mt-4">Kalėdų elfai</h1>
         <p id="loading-text" class="text-gray-400 text-sm">Rengiant rogės...</p>
@@ -110,7 +129,6 @@
                     <p id="receiver-name" class="text-4xl font-extrabold text-teal-400 mt-2">...</p>
                     <p class="text-gray-500 text-sm mt-6">Sėkmingo dovanų ieškojimo! Išrink arba sukurk dovaną, kuri Tavo manymu, padarys šį žmogų laimingu!✨🎄✨</p>
                     
-                    <!-- NEW: Back Button -->
                     <button id="back-button" class="w-full mt-6 bg-gray-700 text-gray-200 font-bold text-lg py-3 rounded-full hover:bg-gray-600 transition-all duration-300">
                         Grįžti atgal
                     </button>
@@ -134,21 +152,20 @@
                      </p>
                      <p class="text-gray-400 text-sm">elfų jau paskirta</p>
                      
-                     <!-- NEW: Go to Export Button -->
                      <button id="go-to-export-button" class="w-full mt-6 bg-blue-600 text-white font-bold text-lg py-3 rounded-full hover:bg-blue-500 transition-all duration-300">
                         Išsaugoti / Eksportuoti
                     </button>
                 </div>
             </div>
 
-            <!-- Card 4: All assignments done (Was Card 3) -->
+            <!-- Card 4: All assignments done -->
             <div id="all-done-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
                 <p class="text-7xl">🎉</p>
                 <p class="text-2xl font-bold text-green-400 mt-4">All Elves Assigned!</p>
                 <p class="text-gray-400 text-lg mt-2">Everyone has a person to gift to. Check with the admin if you need a reset.</p>
             </div>
 
-            <!-- NEW: Card 5: Export View -->
+            <!-- Card 5: Export View -->
             <div id="export-card" class="bg-gray-900 rounded-xl shadow-md shadow-green-900/10 p-6 text-center hidden">
                 <h2 class="text-2xl font-bold text-green-400">Išsaugoti informaciją</h2>
                 <p class="text-gray-400 text-lg mt-4">Tai tavo slaptas paskyrimas:</p>
@@ -279,13 +296,17 @@
         const summaryReceiverName = document.getElementById('summary-receiver-name');
         const progressCount = document.getElementById('progress-count');
         const progressTotal = document.getElementById('progress-total');
-        const goToExportButton = document.getElementById('go-to-export-button'); // Added
+        const goToExportButton = document.getElementById('go-to-export-button'); 
 
         // Export Card Elements
-        const exportCard = document.getElementById('export-card'); // Added
-        const exportText = document.getElementById('export-text'); // Added
-        const exportButton = document.getElementById('export-button'); // Added
-        const exportBackButton = document.getElementById('export-back-button'); // Added
+        const exportCard = document.getElementById('export-card'); 
+        const exportText = document.getElementById('export-text'); 
+        const exportButton = document.getElementById('export-button'); 
+        const exportBackButton = document.getElementById('export-back-button'); 
+
+        // Consent Modal Elements
+        const consentModal = document.getElementById('consent-modal');
+        const consentAgreeButton = document.getElementById('consent-agree-button');
 
         const pinModal = document.getElementById('pin-modal');
         const pinModalCloseButton = document.getElementById('pin-modal-close-button');
@@ -305,18 +326,39 @@
         };
 
         // --- INITIALIZE APP ---
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 1. Show loading screen
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Check for localStorage
+            storageAvailable = isStorageAvailable();
+            
+            // 2. Add event listener for consent
+            consentAgreeButton.addEventListener('click', handleConsentLoad);
+            
+            // 3. Show consent modal or fallback warning
+            if (storageAvailable) {
+                // Show the consent modal first
+                consentModal.classList.remove('hidden');
+            } else {
+                // Storage is blocked (e.g., Incognito), show the warning bar later
+                // and start loading immediately.
+                storageWarning.classList.remove('hidden');
+                handleConsentLoad(); // Start loading, but with storage marked as unavailable
+            }
+        });
+
+        /**
+         * This function is called AFTER the user agrees to consent.
+         * It starts the main app loading sequence.
+         */
+        async function handleConsentLoad() {
+            // Hide consent modal and show loading screen
+            consentModal.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+
+            // 1. Show loading screen animation
             setTimeout(() => {
                 loadingScreen.classList.add('fade-out');
                 setTimeout(() => loadingScreen.style.display = 'none', 1000);
             }, 5000); // Original 5-second load
-
-            // 1a. Check for localStorage
-            storageAvailable = isStorageAvailable();
-            if (!storageAvailable) {
-                storageWarning.classList.remove('hidden');
-            }
 
             // 2. Init Firebase
             try {
@@ -391,7 +433,8 @@
 
             // 7. Add event listeners
             setupEventListeners();
-        });
+        }
+
 
         /**
          * Checks if the database has been seeded with participants. If not, seeds it.
@@ -556,6 +599,13 @@
         async function handleAssignElf() {
             const selectedGiverId = parseInt(nameSelect.value);
             if (!selectedGiverId) return;
+            
+            // Re-check storage just in case
+            if (!storageAvailable) {
+                storageWarning.classList.remove('hidden');
+                console.error("Cannot assign, storage is not available.");
+                return;
+            }
 
             assignButton.disabled = true;
             assignButton.textContent = 'Paskirstymas...';
@@ -653,7 +703,7 @@
                 console.log("Transaction successful. Receiver ID:", finalReceiverId);
                 
                 myGiverId = selectedGiverId;
-                saveMyAssignmentToStorage(myGiverId);
+                saveMyAssignmentToStorage(myGiverId); // This is the critical step
 
                 // Find the receiver's data from our (stable) participants list
                 const receiver = appState.participants.find(p => p.id === finalReceiverId); 
@@ -668,7 +718,6 @@
 
             } catch (error) {
                 console.error("Transaction failed: ", error);
-                // alert("Klaida: " + error.toString()); // Avoid alert
                 assignButton.disabled = false;
                 assignButton.textContent = 'Spausk ir sužinosi✨'; // Reset text
             }
@@ -711,7 +760,7 @@
             }
         }
 
-        // --- NEW: Go to Export Page ---
+        // --- Go to Export Page ---
         function showExportPage() {
             if (!myGiverId) {
                 renderApp(); // Go back home if something is wrong
@@ -729,7 +778,7 @@
             }
         }
         
-        // --- NEW: Handle Export Button ---
+        // --- Handle Export Button ---
         function handleExport() {
             const text = exportText.textContent;
             const element = document.createElement('a');
@@ -743,6 +792,7 @@
 
         // --- UTILITY FUNCTIONS ---
         function setupEventListeners() {
+            // Note: consentAgreeButton listener is set in DOMContentLoaded
             nameSelect.addEventListener('change', () => {
                 assignButton.disabled = !nameSelect.value;
             });
@@ -759,7 +809,7 @@
                 renderApp(); // This will now show the summary card
             });
 
-            // New listeners for Export page
+            // listeners for Export page
             goToExportButton.addEventListener('click', showExportPage);
             exportButton.addEventListener('click', handleExport);
             exportBackButton.addEventListener('click', () => {
